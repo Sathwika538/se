@@ -38,7 +38,7 @@ if(process.env.NODE_ENV!== "PRODUCTION"){
     require("dotenv").config({path:"config/config.env"});
 } 
 
-app.get('/gaming', (req, res) => {
+app.get('/gaming',isAuthenticatedUser, (req, res) => {
 
   Chat.find().sort({ timestamp: 1 }).exec()
   .then(chats => {
@@ -87,7 +87,7 @@ function generateThumbnail(filepath) {
       .then(() => thumbnailFilename);
   }
 
-app.get('/notes', function(req, res) {
+app.get('/notes',isAuthenticatedUser, function(req, res) {
     var query = req.query.q; // Get the search query from the URL parameters
     var files = getUploadedFiles(uploadsDir, query); // Filter the uploaded files by the search query
     res.render('sem_notes', { files: files });
@@ -155,7 +155,7 @@ const storage = multer.diskStorage({
     }
   };
   
-  app.get("/notes", function (req, res) {
+  app.get("/notes",isAuthenticatedUser, function (req, res) {
     
     fs.readdir(uploadsDir, function (err, files) {
       if (err) {
@@ -174,7 +174,7 @@ const storage = multer.diskStorage({
     });
   });
 
-  app.post("/upload", function (req, res) {
+  app.post("/upload", isAuthenticatedUser,function (req, res) {
     upload.single("fileToUpload")(req, res, function (err) {
         if (err instanceof multer.MulterError) {
             res.status(500).send("An error occurred while uploading the file.");
@@ -187,7 +187,7 @@ const storage = multer.diskStorage({
   });
   
 
-  app.post('/gaming', (req, res) => {
+  app.post('/gaming',isAuthenticatedUser, (req, res) => {
     const { message } = req.body;
     console.log('Received chat message:', message);
     const chatMessage = new Chat({ message, sender: 'Anonymous' });
@@ -208,7 +208,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/uploads_blogs", express.static(path.join(__dirname, "uploads_blogs")));
 
 // handle GET requests to /download/:filename
-app.get("/download/:filename", function (req, res) {
+app.get("/download/:filename", isAuthenticatedUser,function (req, res) {
     console.log(req.params.filename);
   const filePath = path.join(__dirname, "uploads/" + req.params.filename);
   res.download(filePath, function (err) {
@@ -220,11 +220,18 @@ app.get("/download/:filename", function (req, res) {
 
 
 
-app.get("/carpooling",async (req, res,next) => {
+app.get("/carpooling",isAuthenticatedUser,async (req, res,next) => {
     res.render("carpooling");
 })
-app.get("/",async (req, res,next) => {
-    res.render("index");
+app.get("/",getAllPosts,async (req, res,next) => {
+  const token = req.cookies.token;
+
+if (token) {
+  // redirect to home page
+  res.render('home');
+} else {
+  res.render('index');
+}
 })
 
 app.post("/",getAllPosts,async (req,res,next) => {
@@ -283,11 +290,11 @@ app.get('/home',getAllPosts,isAuthenticatedUser ,(req,res) => {
     res.render('home');
 })
 
-app.get('/blogs',getAllPosts, (req, res) => {
+app.get('/blogs',isAuthenticatedUser,getAllPosts, (req, res) => {
   res.render('blog');
 });
 
-app.post('/add', upload2.single('image'), (req, res) => {
+app.post('/add',isAuthenticatedUser, upload2.single('image'), (req, res) => {
   const { title, body } = req.body;
   const post = new Post({ title, body });
   if (req.file) {
